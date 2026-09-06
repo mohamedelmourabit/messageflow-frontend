@@ -526,7 +526,7 @@ function BillingTab({ user }) {
 // ============================================
 
 function App() {
-  const [currentPage, setCurrentPage] = useState(() => {
+  const [currentPage] = useState(() => {
     const path = window.location.pathname;
     if (path === '/login') return 'login';
     if (path === '/dashboard') return 'dashboard';
