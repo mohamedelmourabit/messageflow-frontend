@@ -291,7 +291,9 @@ function DashboardPage() {
         {activeTab === 'overview' && (
           <OverviewTab user={user} bookings={bookings} />
         )}
-        {activeTab === 'bookings' && <BookingsTab bookings={bookings} />}
+        {activeTab === 'bookings' && (
+          <BookingsTab bookings={bookings} onChanged={fetchDashboard} />
+        )}
         {activeTab === 'messages' && <MessagesTab messages={messages} />}
         {activeTab === 'settings' && <SettingsTab user={user} />}
         {activeTab === 'billing' && <BillingTab user={user} />}
@@ -337,7 +339,62 @@ function OverviewTab({ user, bookings }) {
   );
 }
 
-function BookingsTab({ bookings }) {
+function BookingsTab({ bookings, onChanged }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const stopEditing = () => {
+    setEditingId(null);
+    setError('');
+  };
+
+  const handleToggle = (booking) => {
+    if (editingId === booking.id) {
+      stopEditing();
+      return;
+    }
+    setEditingId(booking.id);
+    setEditDate(String(booking.booking_date).slice(0, 10));
+    setEditTime(String(booking.start_time || booking.booking_time).slice(0, 5));
+    setError('');
+  };
+
+  const handleSave = async (id) => {
+    setSaving(true);
+    setError('');
+    try {
+      await axios.patch(
+        `${API_BASE}/api/bookings/${id}`,
+        { bookingDate: editDate, bookingTime: editTime },
+        authHeaders(),
+      );
+      stopEditing();
+      onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (!window.confirm('Cancel this booking?')) return;
+    setSaving(true);
+    setError('');
+    try {
+      await axios.patch(`${API_BASE}/api/bookings/${id}/cancel`, {}, authHeaders());
+      stopEditing();
+      onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not cancel booking.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div>
       <h2>📅 Bookings</h2>
@@ -345,6 +402,7 @@ function BookingsTab({ bookings }) {
         <table className="table">
           <thead>
             <tr>
+              <th></th>
               <th>Customer</th>
               <th>Phone</th>
               <th>Date & Time</th>
@@ -353,18 +411,60 @@ function BookingsTab({ bookings }) {
           </thead>
           <tbody>
             {bookings.map((booking) => (
-              <tr key={booking.id}>
-                <td>{booking.customer_name}</td>
-                <td>{booking.customer_phone}</td>
-                <td>
-                  {booking.booking_date} {booking.booking_time}
-                </td>
-                <td>
-                  <span className={`status-badge ${booking.status}`}>
-                    {booking.status}
-                  </span>
-                </td>
-              </tr>
+              <React.Fragment key={booking.id}>
+                <tr>
+                  <td>
+                    {booking.status !== 'cancelled' && (
+                      <input
+                        type="checkbox"
+                        checked={editingId === booking.id}
+                        onChange={() => handleToggle(booking)}
+                      />
+                    )}
+                  </td>
+                  <td>{booking.customer_name}</td>
+                  <td>{booking.customer_phone}</td>
+                  <td>
+                    {String(booking.booking_date).slice(0, 10)}{' '}
+                    {String(booking.start_time || booking.booking_time).slice(0, 5)}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${booking.status}`}>
+                      {booking.status}
+                    </span>
+                  </td>
+                </tr>
+                {editingId === booking.id && (
+                  <tr className="booking-edit-row">
+                    <td></td>
+                    <td colSpan={4}>
+                      <div className="booking-edit-form">
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                        />
+                        <input
+                          type="time"
+                          value={editTime}
+                          onChange={(e) => setEditTime(e.target.value)}
+                        />
+                        <button onClick={() => handleSave(booking.id)} disabled={saving}>
+                          {saving ? 'Saving...' : 'Save changes'}
+                        </button>
+                        <button
+                          className="cancel-btn"
+                          onClick={() => handleCancel(booking.id)}
+                          disabled={saving}
+                        >
+                          Cancel booking
+                        </button>
+                        {error && <span className="booking-edit-error">{error}</span>}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

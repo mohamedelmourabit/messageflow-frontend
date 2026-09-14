@@ -381,6 +381,55 @@ body {
   color: #2e7d32;
 }
 
+.status-badge.cancelled {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.booking-edit-row td {
+  background: #fafafa;
+}
+
+.booking-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.booking-edit-form input[type='date'],
+.booking-edit-form input[type='time'] {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.booking-edit-form button {
+  padding: 8px 14px;
+  font-size: 13px;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.booking-edit-form button:not(.cancel-btn) {
+  background: #0066cc;
+  color: white;
+}
+
+.booking-edit-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.booking-edit-error {
+  color: #c62828;
+  font-size: 13px;
+}
+
 /* ============================================
    MESSAGES
    ============================================ */
