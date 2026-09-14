@@ -550,6 +550,109 @@ body {
   line-height: 1.5;
 }
 
+/* Business Hours */
+.hours-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.hours-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.hours-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+  font-weight: 500;
+  color: #333;
+}
+
+.hours-times {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hours-times input[type='time'] {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.hours-closed {
+  color: #999;
+  font-size: 14px;
+}
+
+.hours-message {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #0066cc;
+}
+
+/* Holidays */
+.holiday-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.holiday-form input[type='date'],
+.holiday-form input[type='text'] {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.holiday-form input[type='text'] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.holiday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.holiday-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #f5f5f5;
+  border-radius: 5px;
+}
+
+.holiday-date {
+  font-weight: 600;
+  color: #333;
+}
+
+.holiday-reason {
+  color: #666;
+  font-size: 13px;
+  flex: 1;
+}
+
+.holiday-row .cancel-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
 /* Billing */
 .plan-info {
   background: #f5f5f5;

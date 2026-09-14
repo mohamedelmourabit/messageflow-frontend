@@ -400,91 +400,204 @@ function MessagesTab({ messages }) {
   );
 }
 
+const DAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+function authHeaders() {
+  return { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
+}
+
 function SettingsTab({ user }) {
-  const [templates, setTemplates] = useState([]);
-  const [templateName, setTemplateName] = useState('');
-  const [templateText, setTemplateText] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [hours, setHours] = useState([]);
+  const [hoursLoading, setHoursLoading] = useState(true);
+  const [savingHours, setSavingHours] = useState(false);
+  const [hoursMessage, setHoursMessage] = useState('');
+
+  const [holidays, setHolidays] = useState([]);
+  const [holidayDate, setHolidayDate] = useState('');
+  const [holidayReason, setHolidayReason] = useState('');
+  const [savingHoliday, setSavingHoliday] = useState(false);
 
   useEffect(() => {
-    fetchTemplates();
+    fetchHours();
+    fetchHolidays();
   }, []);
 
-  const fetchTemplates = async () => {
+  const fetchHours = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE}/api/templates`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTemplates(response.data);
+      const response = await axios.get(`${API_BASE}/api/opening-hours`, authHeaders());
+      setHours(response.data);
+    } catch (err) {
+      console.error('Error:', err);
+    } finally {
+      setHoursLoading(false);
+    }
+  };
+
+  const fetchHolidays = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/holidays`, authHeaders());
+      setHolidays(response.data);
     } catch (err) {
       console.error('Error:', err);
     }
   };
 
-  const handleSaveTemplate = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const updateDay = (dayOfWeek, changes) => {
+    setHours((prev) =>
+      prev.map((day) => (day.day_of_week === dayOfWeek ? { ...day, ...changes } : day)),
+    );
+  };
 
+  const handleSaveHours = async () => {
+    setSavingHours(true);
+    setHoursMessage('');
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_BASE}/api/templates`,
-        {
-          templateName,
-          templateText,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      const payload = hours.map((day) => ({
+        day_of_week: day.day_of_week,
+        is_open: day.is_open,
+        open_time: day.is_open ? (day.open_time || '09:00').slice(0, 5) : null,
+        close_time: day.is_open ? (day.close_time || '18:00').slice(0, 5) : null,
+      }));
+      const response = await axios.put(
+        `${API_BASE}/api/opening-hours`,
+        { hours: payload },
+        authHeaders(),
       );
-      setTemplateName('');
-      setTemplateText('');
-      fetchTemplates();
+      setHours(response.data);
+      setHoursMessage('Hours saved.');
+    } catch (err) {
+      setHoursMessage(err.response?.data?.error || 'Could not save hours.');
+    } finally {
+      setSavingHours(false);
+    }
+  };
+
+  const handleAddHoliday = async (e) => {
+    e.preventDefault();
+    if (!holidayDate) return;
+    setSavingHoliday(true);
+    try {
+      await axios.post(
+        `${API_BASE}/api/holidays`,
+        { date: holidayDate, reason: holidayReason || null },
+        authHeaders(),
+      );
+      setHolidayDate('');
+      setHolidayReason('');
+      fetchHolidays();
     } catch (err) {
       console.error('Error:', err);
     } finally {
-      setLoading(false);
+      setSavingHoliday(false);
+    }
+  };
+
+  const handleDeleteHoliday = async (id) => {
+    try {
+      await axios.delete(`${API_BASE}/api/holidays/${id}`, authHeaders());
+      fetchHolidays();
+    } catch (err) {
+      console.error('Error:', err);
     }
   };
 
   return (
     <div>
-      <h2>⚙️ Auto-Response Templates</h2>
+      <h2>⚙️ Business Hours &amp; Holidays</h2>
 
       <div className="form-section">
-        <h3>Create New Template</h3>
-        <form onSubmit={handleSaveTemplate}>
-          <input
-            type="text"
-            placeholder="Template name (e.g., 'Welcome')"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            required
-          />
-          <textarea
-            placeholder="Template text"
-            value={templateText}
-            onChange={(e) => setTemplateText(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Template'}
-          </button>
-        </form>
+        <h3>Weekly Opening Hours</h3>
+        {hoursLoading ? (
+          <p className="empty-state">Loading...</p>
+        ) : (
+          <>
+            <div className="hours-grid">
+              {hours.map((day) => (
+                <div className="hours-row" key={day.day_of_week}>
+                  <label className="hours-day">
+                    <input
+                      type="checkbox"
+                      checked={day.is_open}
+                      onChange={(e) =>
+                        updateDay(day.day_of_week, {
+                          is_open: e.target.checked,
+                          open_time: day.open_time || '09:00',
+                          close_time: day.close_time || '18:00',
+                        })
+                      }
+                    />
+                    {DAY_NAMES[day.day_of_week]}
+                  </label>
+                  {day.is_open ? (
+                    <div className="hours-times">
+                      <input
+                        type="time"
+                        value={(day.open_time || '09:00').slice(0, 5)}
+                        onChange={(e) => updateDay(day.day_of_week, { open_time: e.target.value })}
+                      />
+                      <span>to</span>
+                      <input
+                        type="time"
+                        value={(day.close_time || '18:00').slice(0, 5)}
+                        onChange={(e) => updateDay(day.day_of_week, { close_time: e.target.value })}
+                      />
+                    </div>
+                  ) : (
+                    <span className="hours-closed">Closed</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={handleSaveHours} disabled={savingHours}>
+              {savingHours ? 'Saving...' : 'Save Hours'}
+            </button>
+            {hoursMessage && <p className="hours-message">{hoursMessage}</p>}
+          </>
+        )}
       </div>
 
-      <div className="templates-section">
-        <h3>Your Templates</h3>
-        {templates.length ? (
-          templates.map((t) => (
-            <div key={t.id} className="template-card">
-              <h4>{t.template_name}</h4>
-              <p>{t.template_text}</p>
-            </div>
-          ))
+      <div className="form-section">
+        <h3>Holidays &amp; Closed Dates</h3>
+        <form className="holiday-form" onSubmit={handleAddHoliday}>
+          <input
+            type="date"
+            value={holidayDate}
+            onChange={(e) => setHolidayDate(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Reason (optional, e.g. 'Eid al-Fitr')"
+            value={holidayReason}
+            onChange={(e) => setHolidayReason(e.target.value)}
+          />
+          <button type="submit" disabled={savingHoliday}>
+            {savingHoliday ? 'Adding...' : 'Add Closed Date'}
+          </button>
+        </form>
+
+        {holidays.length ? (
+          <div className="holiday-list">
+            {holidays.map((h) => (
+              <div className="holiday-row" key={h.id}>
+                <span className="holiday-date">{String(h.holiday_date).slice(0, 10)}</span>
+                {h.reason && <span className="holiday-reason">{h.reason}</span>}
+                <button className="cancel-btn" onClick={() => handleDeleteHoliday(h.id)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
         ) : (
-          <p className="empty-state">No templates yet</p>
+          <p className="empty-state">No holidays configured</p>
         )}
       </div>
     </div>
